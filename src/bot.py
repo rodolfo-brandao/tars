@@ -80,7 +80,7 @@ async def search_movies(ctx, *args) -> None:
             embeds = __build_search_command_embeds(
                 movies=api_result.get_response())
 
-            for embed in embeds:
+            for embed in embeds[:10]:
                 await ctx.send(embed=embed)
                 __delay(seconds=1)
 

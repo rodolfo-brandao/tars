@@ -50,6 +50,7 @@ class MovieHandler:
                 else:
                     api_result.set_response([])
             else:
+                print('Status Code:', response.status_code)
                 api_result.set_status_code(response.status_code)
                 api_result.set_error_message(
                     'Oops. Looks like something went wrong when making the request :grimacing:')
