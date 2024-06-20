@@ -24,13 +24,14 @@ class MovieHandler:
 
         Returns
         -------
-        List[MovieModel]
-            A list of type 'MovieModel' containing all occurrences of
-            the movies along with their respective files.
+        ApiResult
+            An instance of 'ApiResult' class containing all occurrences
+            of the movies along with their respective files.
 
         Exceptions
         ----------
         request.exceptions.Timeout
+            For when a request takes more than 60s to execute.
         '''
 
         api_result = ApiResult()
