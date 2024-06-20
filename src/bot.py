@@ -64,22 +64,27 @@ async def search_movies(ctx, *args) -> None:
         It is expected to be one of: movie title, actor name, director name or IMDb code.'''
 
     term = ' '.join(args).lower()
-    movie_handler = MovieHandler(base_url=settings['thirdPartyApiBaseUrl'])
-    api_result = movie_handler.search_movies(term=term)
 
-    if api_result.get_status_code() != 200:
-        await ctx.send(api_result.get_error_message())
-    elif api_result.get_status_code() == 200 and len(api_result.get_response()) == 0:
-        await ctx.send("Sorry. I couldn't find any movie with that name/IMDb code :confused:")
+    if len(term) <= 3:
+        await ctx.send('This term seems very short :thinking:\n'
+                       'How about searching with a longer name or IMDb code?')
     else:
-        embeds = __build_search_command_embeds(
-            movies=api_result.get_response())
+        movie_handler = MovieHandler(base_url=settings['thirdPartyApiBaseUrl'])
+        api_result = movie_handler.search_movies(term=term)
 
-        for embed in embeds:
-            await ctx.send(embed=embed)
-            __delay(seconds=1)
+        if api_result.get_status_code() != 200:
+            await ctx.send(api_result.get_error_message())
+        elif api_result.get_status_code() == 200 and len(api_result.get_response()) == 0:
+            await ctx.send("Sorry. I couldn't find any movie with that name/IMDb code :confused:")
+        else:
+            embeds = __build_search_command_embeds(
+                movies=api_result.get_response())
 
-        await ctx.send("That's all :popcorn:")
+            for embed in embeds:
+                await ctx.send(embed=embed)
+                __delay(seconds=1)
+
+            await ctx.send("That's all :popcorn:")
 
 
 def run() -> None:
@@ -135,7 +140,7 @@ def __build_help_command_embed() -> discord.Embed:
 
     embed.add_field(
         name='?search <movie_name> | <imdb_code>',
-        value='Searches for movie occurences based on the name or IMDb code.',
+        value='Lists movie occurences based on the given name or IMDb code (max 10).',
         inline=False
     )
 
