@@ -1,6 +1,5 @@
-'''This .py file represents the Discord bot, being responsible
-for centralizing its events and commands, besides of
-communicating with API handlers.'''
+'''Represents the Discord bot, being responsible for centralizing
+its events and commands, besides of communicating with API handlers.'''
 
 from typing import List
 import time
@@ -8,7 +7,7 @@ import json
 import discord
 from discord.ext import commands
 from handlers.movie_handler import MovieHandler
-from models.movie import Movie
+from utils.typed_dicts.movie_dict import Movie
 
 settings: dict = {}
 intents = discord.Intents.all()
@@ -30,42 +29,57 @@ async def on_ready() -> None:
 
 @bot.command(help='Shows the bot latency.')
 async def ping(ctx) -> None:
-    '''Bot command to send a message showing the bot's current latency in milliseconds.
+    '''Command to send a message showing the bot's current latency in milliseconds.
 
     Parameters
     ----------
     ctx : Any
         The Discord API context for the bot.'''
 
-    await ctx.send(f'Pong!\nThe current latency is {round(bot.latency * 1000)}ms')
+    await ctx.send(f'Pong! :ping_pong:\nThe current latency is {round(bot.latency * 1000)}ms')
+
+
+@bot.command(name='info', help='Custom "help" command to display all avaliable commands')
+async def display_commands(ctx) -> None:
+    '''Command to send a message showing all bot's avaliable commands.
+    Parameters
+    ----------
+    ctx : Any
+        The Discord API context for the bot.'''
+
+    await ctx.send(embed=__build_help_command_embed())
 
 
 @bot.command(name='search', help='Searches for movie occurences.')
 async def search_movies(ctx, *args) -> None:
-    '''Bot command to search for movie occurences based on the given term.
+    '''Command to search for movie occurences based on the given arguments.
 
     Parameters
     ----------
     ctx : Any
         The Discord API context for the bot.
 
-    *args
+    *args : [Any]
         The arguments to be used as query in the handler.
         It is expected to be one of: movie title, actor name, director name or IMDb code.'''
 
     term = ' '.join(args).lower()
-    __movie_handler = MovieHandler(base_url=settings['thirdPartyApiBaseUrl'])
-    movies = __movie_handler.search_movies(term=term)
+    movie_handler = MovieHandler(base_url=settings['thirdPartyApiBaseUrl'])
+    api_result = movie_handler.search_movies(term=term)
 
-    await ctx.send('Here are the movies that I found')
+    if api_result.get_status_code() != 200:
+        await ctx.send(api_result.get_error_message())
+    elif api_result.get_status_code() == 200 and len(api_result.get_response()) == 0:
+        await ctx.send("Sorry. I couldn't find any movie with that name/IMDb code :confused:")
+    else:
+        embeds = __build_search_command_embeds(
+            movies=api_result.get_response())
 
-    messages = __build_search_command_message(movies=movies)
+        for embed in embeds:
+            await ctx.send(embed=embed)
+            __delay(seconds=1)
 
-    for message in messages:
-        await ctx.send(message)
-        __delay(1.5)
-
-    await ctx.send('...\nDone!')
+        await ctx.send("That's all :popcorn:")
 
 
 def run() -> None:
@@ -75,30 +89,57 @@ def run() -> None:
     bot.run(token=settings['token'])
 
 
-def __build_search_command_message(movies: List[Movie]) -> List[str]:
-    messages: List[str] = []
-    movie_count: int = 0
+def __build_search_command_embeds(movies: List[Movie]) -> List[discord.Embed]:
+    embeds: List[discord.Embed] = []
 
     for movie in movies:
-        movie_count += 1
-        details = f'...\n{movie_count} - **Title**: *{movie.title}*'\
-            f'  |  **IMDb Rating**: {movie.imdb_rating}' \
-            f'  |  **Runtime**: {movie.runtime}\n'
+        description = f'**IMDb Rating**: {movie["imdb_rating"]} | **Runtime**: {movie["runtime"]}'
+        green_hex_code = 0x008000
 
-        file_options: List[str] = []
-        for movie_file in movie.files:
-            file_options.append(
-                f'> URL: {movie_file.file_url}\n'
-                f'> **Quality**: {movie_file.quality}'
-                f'  |  **Type**: {movie_file.file_type}'
-                f'  |  **Seeds**/**Peers**: {movie_file.seeds}/{movie_file.peers}'
-                f'  |  **Size**: {movie_file.size}'
-            )
+        embed = discord.Embed(
+            title=f'{movie["title"]}',
+            url=f'{movie["url"]}',
+            description=description,
+            color=green_hex_code
+        )
 
-        details += '\n\n'.join(file_options)
-        messages.append(details)
+        embed.set_thumbnail(url=movie['poster_url'])
 
-    return messages
+        for movie_file in movie['files']:
+            value = f'**Quality**: {movie_file["quality"]}'\
+                f' | **Type**: {movie_file["type"]}'\
+                f' | **Seeds**/**Peers**: {movie_file["seeds"]}/{movie_file["peers"]}'\
+                f' | **Size**: {movie_file["size"]} '
+
+            embed.add_field(
+                name=movie_file['file_url'], value=value, inline=False)
+
+        embeds.append(embed)
+    return embeds
+
+
+def __build_help_command_embed() -> discord.Embed:
+    coral_hex_code = 0xFF7F50
+
+    embed = discord.Embed(
+        title='Commands',
+        description="These are all the commands I can run :point_down:",
+        color=coral_hex_code
+    )
+
+    embed.add_field(
+        name='?ping',
+        value='Shows the current latency of the BOT.',
+        inline=False
+    )
+
+    embed.add_field(
+        name='?search <movie_name> | <imdb_code>',
+        value='Searches for movie occurences based on the name or IMDb code.',
+        inline=False
+    )
+
+    return embed
 
 
 def __delay(seconds: float) -> None:
