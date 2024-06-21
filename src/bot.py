@@ -111,13 +111,13 @@ def __build_search_command_embeds(movies: List[Movie]) -> List[discord.Embed]:
         embed.set_thumbnail(url=movie['poster_url'])
 
         for movie_file in movie['files']:
-            value = f'**Quality**: {movie_file["quality"]}'\
-                f' | **Type**: {movie_file["type"]}'\
-                f' | **Seeds**/**Peers**: {movie_file["seeds"]}/{movie_file["peers"]}'\
-                f' | **Size**: {movie_file["size"]} '
+            name = f'Quality: {movie_file["quality"]}'\
+                f' | Type: {movie_file["type"]}'\
+                f' | Seeds/Peers: {movie_file["seeds"]}/{movie_file["peers"]}'\
+                f' | Size: {movie_file["size"]} '
 
             embed.add_field(
-                name=movie_file['file_url'], value=value, inline=False)
+                name=name, value=movie_file['file_url'], inline=False)
 
         embeds.append(embed)
     return embeds
