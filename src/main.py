@@ -1,6 +1,8 @@
-'''This is the application entrypoint.'''
+"""The application entrypoint."""
+
 
 import bot
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     bot.run()
