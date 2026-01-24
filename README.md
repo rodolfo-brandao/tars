@@ -22,11 +22,11 @@ $ cd tars
 
 The following packages are required in order to run this bot:
 
-- [python-dotenv](https://pypi.org/project/python-dotenv/)
 - [discord.py](https://discordpy.readthedocs.io/en/stable/)
+- [python-dotenv](https://pypi.org/project/python-dotenv/)
 - [requests](https://pypi.org/project/requests/)
 
-These can be installed through the `requirements.txt` file by running the following [pip](https://pip.pypa.io/en/stable/) command:
+These can be installed through `requirements.txt` file by running:
 
 ```bash
 $ python3 -m pip install -r requirements.txt
