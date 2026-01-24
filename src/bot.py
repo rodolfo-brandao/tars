@@ -1,135 +1,150 @@
-'''Represents the Discord bot, being responsible for centralizing
-its events and commands, besides of communicating with API handlers.'''
+"""The bot itself. This module is responsible for centralizing
+all events and commands, besides of communicating with API handlers."""
 
-from typing import List
+
+import os
 import time
-import json
 import discord
+from dotenv import load_dotenv
+from typing import List, Optional
 from discord.ext import commands
-from handlers.movie_handler import MovieHandler
-from utils.typed_dicts.movie_dict import Movie
+from discord.ext.commands import Context
+from handler import MovieHandler, Movie
 
-settings: dict = {}
+
+load_dotenv()
+YTS_API_TOKEN: Optional[str] = os.getenv("YTS_API_TOKEN")
+YTS_API_BASE_URL: Optional[str] = os.getenv("YTS_API_BASE_URL")
+
+
 intents = discord.Intents.all()
 intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix='?', intents=intents)
 
-with open(file='json/settings.json', encoding='UTF-8', mode='r') as file:
-    settings = json.load(fp=file)
-    file.close()
-
 
 @bot.event
 async def on_ready() -> None:
-    '''Logs when the bot is running.'''
+    """
+    Logs when the bot is running.
+    """
 
     print(f'{bot.user} is running!')
 
 
 @bot.command(help='Shows the bot latency.')
-async def ping(ctx) -> None:
-    '''Command to send a message showing the bot's current latency in milliseconds.
+async def ping(ctx: Context) -> None:
+    """
+    Sends a message with the bot's current latency in milliseconds.
 
-    Parameters
-    ----------
-    ctx : Any
-        The Discord API context for the bot.'''
+    :param ctx: Represents the context in which a command is being invoked under.
+    :type ctx: Context
+    """
 
-    await ctx.send(f'Pong! :ping_pong:\nThe current latency is {round(bot.latency * 1000)}ms')
+    await ctx.send(f"Pong! :ping_pong:\nThe current latency is {round(bot.latency * 1000)}ms")
 
 
-@bot.command(name='info', help='Custom "help" command to display all avaliable commands')
-async def display_commands(ctx) -> None:
-    '''Command to send a message showing all bot's avaliable commands.
-    Parameters
-    ----------
-    ctx : Any
-        The Discord API context for the bot.'''
+@bot.command(name='info', help="Custom helper command to display all avaliable commands.")
+async def display_commands(ctx: Context) -> None:
+    """
+    Sends a message showing all the bot's avaliable commands.
 
-    await ctx.send(embed=__build_help_command_embed())
+    :param ctx: Represents the context in which a command is being invoked under.
+    :type ctx: Context
+    """
+
+    await ctx.send(embed=build_helper_embed())
 
 
 @bot.command(name='search', help='Searches for movie occurences.')
 async def search_movies(ctx, *args) -> None:
-    '''Command to search for movie occurences based on the given arguments.
+    """
+    Searchs for movie occurences based on the given arguments.
 
-    Parameters
-    ----------
-    ctx : Any
-        The Discord API context for the bot.
+    :param ctx: Represents the context in which a command is being invoked under.
+    :type ctx: Context
 
-    *args : [Any]
-        The arguments to be used as query in the handler.
-        It is expected to be one of: movie title, actor name, director name or IMDb code.'''
+    :param *args: The arguments to be used as query in the handler, such as movie title or IMDb code.
+    :type *args: Any
+    """
 
-    term = ' '.join(args).lower()
+    term = " ".join(args).lower()
 
     if len(term) <= 3:
-        await ctx.send('This term seems very short :thinking:\n'
-                       'How about searching with a longer name or IMDb code?')
+        await ctx.send("This term seems too short :thinking:\n"
+                       "How about searching using an IMDb code or a longer movie title?")
     else:
-        movie_handler = MovieHandler(base_url=settings['thirdPartyApiBaseUrl'])
+        movie_handler = MovieHandler(base_url=YTS_API_BASE_URL or "")
         api_result = movie_handler.search_movies(term=term)
 
-        if api_result.get_status_code() != 200:
-            await ctx.send(api_result.get_error_message())
-        elif api_result.get_status_code() == 200 and len(api_result.get_response()) == 0:
-            await ctx.send("Sorry. I couldn't find any movie with that name/IMDb code :confused:")
+        if api_result.status_code != 200:
+            await ctx.send(api_result.error_message)
+        elif api_result.status_code == 200 and len(api_result.response) == 0:
+            await ctx.send("Sorry. I couldn't find any movie with that title or IMDb code :confused:")
         else:
-            embeds = __build_search_command_embeds(
-                movies=api_result.get_response())
+            embeds = build_search_embeds(movies=api_result.response)
 
             for embed in embeds[:10]:
                 await ctx.send(embed=embed)
-                __delay(seconds=1)
+                time.sleep(1)
 
             await ctx.send("That's all :popcorn:")
 
 
 def run() -> None:
-    '''Simply runs the bot.
-    This function should be called in the "main.py" file.'''
+    """
+    Simply runs the bot.
+    This function should be called in the "main.py" file.
+    """
 
-    bot.run(token=settings['token'])
+    bot.run(token=YTS_API_TOKEN or "")
 
 
-def __build_search_command_embeds(movies: List[Movie]) -> List[discord.Embed]:
+def build_search_embeds(movies: List[Movie]) -> List[discord.Embed]:
+    """
+    Builds the discord embed objects for the "search" command.
+
+    :param movies: The list containing all movies found in the search.
+    :type movies: List[Movie]
+
+    :return: A list of discord embeds.
+    :rtype: List[Embed]
+    """
+
     embeds: List[discord.Embed] = []
-
     for movie in movies:
-        description = f'**IMDb Rating**: {movie["imdb_rating"]} | **Runtime**: {movie["runtime"]}'
-        green_hex_code = 0x008000
-
         embed = discord.Embed(
-            title=f'{movie["title"]}',
-            url=f'{movie["url"]}',
-            description=description,
-            color=green_hex_code
+            title=movie.title.upper(),
+            url=movie.url,
+            description=None,
+            color=0x008000  # green
         )
 
-        embed.set_thumbnail(url=movie['poster_url'])
+        embed.set_thumbnail(url=movie.poster_url)
 
-        for movie_file in movie['files']:
-            name = f'Quality: {movie_file["quality"]}'\
-                f' | Type: {movie_file["type"]}'\
-                f' | Seeds/Peers: {movie_file["seeds"]}/{movie_file["peers"]}'\
-                f' | Size: {movie_file["size"]} '
-
+        for movie_file in movie.files:
             embed.add_field(
-                name=name, value=movie_file['file_url'], inline=False)
+                name=f"{movie_file.type.upper()} {movie_file.quality} ({movie_file.size})",
+                value=f":link: [Download]({movie_file.url})",
+                inline=False
+            )
 
         embeds.append(embed)
     return embeds
 
 
-def __build_help_command_embed() -> discord.Embed:
-    coral_hex_code = 0xFF7F50
+def build_helper_embed() -> discord.Embed:
+    """
+    Builds the discord embed object for the "help" command.
+
+    :return: A single discord embed object.
+    :rtype: Embed
+    """
 
     embed = discord.Embed(
         title='Commands',
         description="These are all the commands I can run :point_down:",
-        color=coral_hex_code
+        color=0xFF7F50  # coral
     )
 
     embed.add_field(
@@ -139,13 +154,9 @@ def __build_help_command_embed() -> discord.Embed:
     )
 
     embed.add_field(
-        name='?search <movie_name> | <imdb_code>',
-        value='Lists movie occurences based on the given name or IMDb code (max 10).',
+        name='?search <movie_title> | <imdb_code>',
+        value='Searches for movie occurences (max 10) based on the given title or IMDb code.',
         inline=False
     )
 
     return embed
-
-
-def __delay(seconds: float) -> None:
-    time.sleep(seconds)
