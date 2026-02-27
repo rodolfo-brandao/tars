@@ -1,11 +1,10 @@
 # TARS
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](https://github.com/rodolfo-brandao/tars/blob/main/LICENSE)
-![Python version](https://img.shields.io/badge/Python-3.9-blue?logo=python&logoColor=white)
+![Python version](https://img.shields.io/badge/Python-3.14-blue?logo=python&logoColor=white)
 [![Pylint](https://github.com/rodolfo-brandao/tars/actions/workflows/pylint.yml/badge.svg)](https://github.com/rodolfo-brandao/cinematica/actions/workflows/pylint.yml)
-![Last GitHub commit](https://img.shields.io/github/last-commit/rodolfo-brandao/tars?logo=git&logoColor=red&color=red)
 
-My own [Discord](https://discord.com/) bot, named after the sarcastic robot from Interstellar.
+My own [Discord](https://discord.com/) bot, named after the sarcastic robot from Interstellar, made for me and my friends to help us _discover_ movies 👀
 
 ## Setup
 
@@ -18,7 +17,7 @@ git clone https://github.com/rodolfo-brandao/tars.git
 cd tars
 ```
 
-2. Create `.venv` and install dependencies:
+2. Manage `.venv` and dependencies:
 ```bash
 python3 -m venv .venv
 ```
@@ -31,11 +30,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-```bash
-pip freeze > requirements.txt
-```
-
-3. Run the bot (.venv):
+3. Run the bot:
 ```bash
 python -m src.main
 ```
